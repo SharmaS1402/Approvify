@@ -5,7 +5,7 @@ export default function Page(){
     return (
         <div>
             <Navbar/>
-            <div className="flex flex-col item-center">
+            <div className="overflow-hidden flex flex-col item-center">
             <RegisterForm/>
             </div>
         </div>

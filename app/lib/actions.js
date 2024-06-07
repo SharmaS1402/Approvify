@@ -1,4 +1,5 @@
 'use server'
+import { Prisma } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import {z} from 'zod';
@@ -20,7 +21,7 @@ const formSchema = z.object({
 const RegisterUser = formSchema.omit({id : true});
 const prisma = new PrismaClient();
 
-export async function registerUser(prevState , formData){
+export async function registerUser(prevState , formData, showAlert){
   const validatedFields = RegisterUser.safeParse({
     username : formData.get('username'),
     password : formData.get('password'),
@@ -34,12 +35,6 @@ export async function registerUser(prevState , formData){
     };
   }
   const {username, password, whatsapp} = validatedFields.data;
-  // if(whatsapp.length() !== 10){
-  //   return {
-  //     errors : 1,
-  //     message : 'Invalid Whatsapp Number. Failed to Register User.'
-  //   }
-  // }
   try{
   const newuser = await prisma.users.create({
     data : {
@@ -49,6 +44,22 @@ export async function registerUser(prevState , formData){
     }
   })
 } catch(error){
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2002' && error.meta.target.includes('username')) {
+      return {
+        errors: { username: ['Username is already taken'] },
+        message: 'Username is already taken. Failed to register user.',
+      };
+    }
+  }
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2002' && error.meta.target.includes('whatsapp')) {
+      return {
+        errors: { whatsapp: ['Whatsapp number already exists.'] },
+        message: 'Whatsapp number already exists. Failed to register user.',
+      };
+    }
+  }
   return {
     errors:  {database: [error.message] },
     message : 'Database Error : Failed to register user.',
