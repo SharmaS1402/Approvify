@@ -19,9 +19,11 @@ const formSchema = z.object({
 
 
 const RegisterUser = formSchema.omit({id : true});
+const LoginUser = formSchema.omit({id : true, whatsapp : true});
+
 const prisma = new PrismaClient();
 
-export async function registerUser(prevState , formData, showAlert){
+export async function registerUser(prevState , formData){
   const validatedFields = RegisterUser.safeParse({
     username : formData.get('username'),
     password : formData.get('password'),
@@ -67,3 +69,54 @@ export async function registerUser(prevState , formData, showAlert){
 }
   redirect('/');
 }
+
+
+
+export async function loginUser(prevState, formData){
+  const validatedFields = LoginUser.safeParse({
+    username : formData.get('username'),
+    password : formData.get('password')
+  });
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Missing Fields. Failed to Send Prompt.',
+    };
+  }
+  const {username, password} = validatedFields.data;
+  try{
+    const user = await prisma.users.findFirst({
+      where : {
+        username : username
+      }
+    });
+    console.log(user);
+    if(user ){
+      if(user.password === password){
+        console.log('matched');
+        // make request to sendPrompt endpoint....
+        
+      } else{
+        return {
+          errors: { password: ['Username and Password does not match'],
+                    username : ['Username and Password does not match']
+           },
+          message: 'Username and Password does not match.',
+        };
+      }
+    }
+    else{
+      return {
+        errors : {username : ['Username does not exist']},
+        message : 'Username does not exist.',
+      };
+    }
+    
+  } catch(error){
+    return {
+      errors: { database: [error.message] },
+      message: 'Database error. Couldn\'t log user in.'
+    }
+  }
+  redirect('/');
+};
